@@ -24,6 +24,102 @@ const LABELS = 'zdn-labels';
 /** Free vector basemap — no API key. We hide its place labels and draw our own. */
 const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 
+type LngLatBoundsTuple = [[number, number], [number, number]];
+
+/**
+ * Zamboanga peninsula (del Norte, del Sur, Sibugay, Zamboanga City).
+ * Unioned with ZDN municipality bounds plus {@link ZDN_COMFORT_DEG}.
+ */
+const PENINSULA_WINDOW: LngLatBoundsTuple = [[121.8, 6.8], [123.9, 8.9]];
+/** Degrees of margin so ZDN never sits on the maxBounds edge. */
+const ZDN_COMFORT_DEG = 0.15;
+const ZDN_FIT = { padding: 28, maxZoom: 10, duration: 0 } as const;
+
+function roundOut(value: number, direction: -1 | 1): number {
+  const scaled = value * 100;
+  const snapped = direction < 0 ? Math.floor(scaled + 1e-6) : Math.ceil(scaled - 1e-6);
+  return snapped / 100;
+}
+
+/** Peninsula window, expanded if the ZDN GeoJSON (plus comfort margin) sticks out. */
+function peninsulaMaxBounds(zdn: LngLatBoundsTuple | null): LngLatBoundsTuple {
+  if (!zdn) return PENINSULA_WINDOW;
+  const [[w, s], [e, n]] = zdn;
+  return [
+    [
+      roundOut(Math.min(PENINSULA_WINDOW[0][0], w - ZDN_COMFORT_DEG), -1),
+      roundOut(Math.min(PENINSULA_WINDOW[0][1], s - ZDN_COMFORT_DEG), -1),
+    ],
+    [
+      roundOut(Math.max(PENINSULA_WINDOW[1][0], e + ZDN_COMFORT_DEG), 1),
+      roundOut(Math.max(PENINSULA_WINDOW[1][1], n + ZDN_COMFORT_DEG), 1),
+    ],
+  ];
+}
+
+function mercY(lat: number): number {
+  const rad = (lat * Math.PI) / 180;
+  return (1 - Math.log(Math.tan(Math.PI / 4 + rad / 2)) / Math.PI) / 2;
+}
+
+function latAtMercY(y: number): number {
+  return (Math.atan(Math.exp((1 - 2 * y) * Math.PI)) * 2 - Math.PI / 2) * (180 / Math.PI);
+}
+
+/**
+ * Peninsula lock, widened only when this frame is too short or wide for
+ * fitBounds(ZDN) to stay inside it (the mobile map is about half height).
+ */
+function boundsForViewport(map: MapLibreMap, zdn: LngLatBoundsTuple | null): LngLatBoundsTuple {
+  const base = peninsulaMaxBounds(zdn);
+  if (!zdn) return base;
+  const { clientWidth: vw, clientHeight: vh } = map.getContainer();
+  const pad = ZDN_FIT.padding;
+  const innerW = vw - pad * 2;
+  const innerH = vh - pad * 2;
+  if (innerW < 48 || innerH < 48) return base;
+  const [[w0, s0], [e0, n0]] = zdn;
+  const zw = (e0 - w0) / 360;
+  const zh = mercY(s0) - mercY(n0);
+  if (zw <= 0 || zh <= 0) return base;
+  const world = Math.min(innerW / zw, innerH / zh);
+  const needX = (vw / world) * 1.03;
+  const needY = (vh / world) * 1.03;
+  let west = base[0][0];
+  let south = base[0][1];
+  let east = base[1][0];
+  let north = base[1][1];
+  const haveX = (east - west) / 360;
+  if (needX > haveX) {
+    const grow = ((needX - haveX) * 360) / 2;
+    west -= grow;
+    east += grow;
+  }
+  const ySouth = mercY(south);
+  const yNorth = mercY(north);
+  if (needY > ySouth - yNorth) {
+    const mid = (ySouth + yNorth) / 2;
+    const half = needY / 2;
+    south = latAtMercY(mid + half);
+    north = latAtMercY(mid - half);
+  }
+  return [
+    [roundOut(west, -1), roundOut(south, -1)],
+    [roundOut(east, 1), roundOut(north, 1)],
+  ];
+}
+
+function syncPeninsulaLock(map: MapLibreMap, zdn: LngLatBoundsTuple | null): void {
+  const maxBounds = boundsForViewport(map, zdn);
+  map.setMaxBounds(maxBounds);
+  const el = map.getContainer();
+  if (el.clientWidth < 32 || el.clientHeight < 32) return;
+  // Floor is the zoom at which the lock covers this viewport (lower when the map is shorter).
+  map.setMinZoom(0);
+  const floor = map.getMinZoom(true);
+  if (Number.isFinite(floor)) map.setMinZoom(floor);
+}
+
 function enrich(
   geo: FeatureCollection,
   totals: Map<TownId, number>,
@@ -159,6 +255,7 @@ export default function ProvinceMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const zdnBoundsRef = useRef<LngLatBoundsTuple | null>(null);
   const onSelectRef = useRef(onSelectTown);
   const dataRef = useRef<FeatureCollection | null>(null);
   const maxRef = useRef(0);
@@ -213,9 +310,17 @@ export default function ProvinceMap({
       zoom: 8.2,
       attributionControl: { compact: true },
       scrollZoom: false,
+      maxBounds: PENINSULA_WINDOW,
+      dragRotate: false,
+      touchPitch: false,
     });
+    map.dragRotate.disable();
+    map.touchPitch.disable();
+    map.touchZoomRotate.disableRotation();
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     mapRef.current = map;
+
+    const lock = () => syncPeninsulaLock(map, zdnBoundsRef.current);
 
     const ensureLayers = () => {
       hideBasemapLabels(map);
@@ -281,9 +386,9 @@ export default function ProvinceMap({
         });
       }
       const b = boundsOf(fc);
-      if (b && fc.features.length) {
-        map.fitBounds(b, { padding: 28, maxZoom: 10, duration: 0 });
-      }
+      if (b && fc.features.length) zdnBoundsRef.current = b;
+      lock();
+      if (b && fc.features.length) map.fitBounds(b, ZDN_FIT);
       map.resize();
       setReady(true);
     };
@@ -314,6 +419,7 @@ export default function ProvinceMap({
       setHover(null);
     });
 
+    map.on('resize', lock);
     const onResize = () => map.resize();
     window.addEventListener('resize', onResize);
 
@@ -338,8 +444,19 @@ export default function ProvinceMap({
       map.setPaintProperty(FILL, 'fill-color', fillColorExpr(max) as never);
     }
     const b = boundsOf(data);
-    if (b) map.fitBounds(b, { padding: 28, maxZoom: 10, duration: 0 });
+    if (b) {
+      zdnBoundsRef.current = b;
+      syncPeninsulaLock(map, b);
+      map.fitBounds(b, ZDN_FIT);
+    }
   }, [ready, data, max]);
+
+  const resetView = () => {
+    const map = mapRef.current;
+    const b = zdnBoundsRef.current;
+    if (!map || !b) return;
+    map.fitBounds(b, ZDN_FIT);
+  };
 
   const towns = useMemo(() => {
     if (!data) return [];
@@ -363,6 +480,11 @@ export default function ProvinceMap({
     >
       {!geo && <div className="map-skeleton" aria-busy="true">Loading map…</div>}
       <div className="province-map-canvas" ref={containerRef} />
+      {ready && (
+        <button type="button" className="button button-quiet map-reset" onClick={resetView}>
+          Reset view
+        </button>
+      )}
       {hover && (
         <div className="map-tooltip" style={{ left: hover.x, top: hover.y }} role="status">
           {hover.label}: {php(hover.value)}

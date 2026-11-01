@@ -880,13 +880,27 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
   gap: var(--space);
   margin-bottom: calc(var(--space) * 2);
 }
-.province-map { position: relative; margin-bottom: calc(var(--space) * 3); }
+.province-map {
+  position: relative;
+  /* Near-square so peninsula maxBounds can still fit every ZDN municipality
+     on a short mobile map and on desktop. A wide frame crops Dipolog. */
+  width: min(100%, max(280px, 70vh), 520px);
+  margin-inline: auto;
+  margin-bottom: calc(var(--space) * 3);
+}
 .province-map-canvas {
   width: 100%;
-  height: min(70vh, 520px);
-  min-height: 280px;
+  aspect-ratio: 1;
+  height: auto;
   border: 1px solid var(--rule);
   background: var(--paper-2);
+}
+.map-reset {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 10px;
+  box-shadow: 0 1px 2px rgba(17, 21, 28, 0.12);
 }
 .map-skeleton {
   min-height: 280px;
