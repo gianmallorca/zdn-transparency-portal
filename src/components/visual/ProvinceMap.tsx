@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { RotateCcw } from 'lucide-react';
 import {
   Map as MapLibreMap,
   NavigationControl,
@@ -479,17 +480,20 @@ export default function ProvinceMap({
       aria-label="Map of Zamboanga del Norte municipalities shaded by proposed project funding"
     >
       {!geo && <div className="map-skeleton" aria-busy="true">Loading map…</div>}
-      <div className="province-map-canvas" ref={containerRef} />
-      {ready && (
-        <button type="button" className="button button-quiet map-reset" onClick={resetView}>
-          Reset view
-        </button>
-      )}
-      {hover && (
-        <div className="map-tooltip" style={{ left: hover.x, top: hover.y }} role="status">
-          {hover.label}: {php(hover.value)}
-        </div>
-      )}
+      <div className="province-map-frame">
+        <div className="province-map-canvas" ref={containerRef} />
+        {ready && (
+          <button type="button" className="button button-quiet map-reset" onClick={resetView} aria-label="Reset view">
+            <RotateCcw className="map-reset-icon" size={18} strokeWidth={2.25} aria-hidden="true" />
+            <span className="map-reset-label">Reset view</span>
+          </button>
+        )}
+        {hover && (
+          <div className="map-tooltip" style={{ left: hover.x, top: hover.y }} role="status">
+            {hover.label}: {php(hover.value)}
+          </div>
+        )}
+      </div>
       <div className="map-legend" aria-hidden="true">
         <span>Less</span>
         <span className="map-legend-bar" />

@@ -888,6 +888,7 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
   margin-inline: auto;
   margin-bottom: calc(var(--space) * 3);
 }
+.province-map-frame { position: relative; }
 .province-map-canvas {
   width: 100%;
   aspect-ratio: 1;
@@ -897,10 +898,18 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
 }
 .map-reset {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   top: 10px;
   left: 10px;
+  background: var(--paper);
   box-shadow: 0 1px 2px rgba(17, 21, 28, 0.12);
+}
+.map-reset-icon { display: none; }
+.map-reset:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .map-skeleton {
   min-height: 280px;
@@ -1938,10 +1947,36 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
   .subnav a { font-size: 13px; min-height: 44px; }
 }
 
-/* Mobile: half-height map, town picker above it */
+/* Mobile: half-height map, town picker above it.
+   Reset sits in the map's top-right, under the zoom control (10px inset,
+   29px buttons, 10px gap) so it misses the picker, attribution, and towns. */
 @media (max-width: 720px) {
   .province-map { display: flex; flex-direction: column; }
   .province-map .map-town-select { order: -1; margin: 0 0 var(--space); }
   .province-map-canvas { height: min(35vh, 260px); min-height: 220px; }
   .map-skeleton { min-height: 220px; }
+  .map-reset {
+    top: 78px;
+    left: auto;
+    right: 10px;
+    width: var(--tap);
+    min-width: var(--tap);
+    height: var(--tap);
+    min-height: var(--tap);
+    padding: 0;
+    border-color: var(--rule);
+    color: var(--ink);
+  }
+  .map-reset-icon { display: block; }
+  .map-reset-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
