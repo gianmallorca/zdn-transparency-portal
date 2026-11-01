@@ -16,6 +16,7 @@ import {
 import { usePortal } from '../lib/portal-context';
 import type { ScopedProject } from '../lib/scope';
 import { Await, StatusChip } from './Bits';
+import FriendlyCompare, { type CompareRow as FriendlyRow } from './visual/FriendlyCompare';
 
 const TREND_COLORS = ['var(--ink)', 'var(--accent)', 'var(--positive)', 'var(--neutral)'];
 
@@ -212,29 +213,53 @@ function Share({
 }) {
   const houseTotal = columnTotal(rows, 'house');
   const nepTotal = columnTotal(rows, 'nep');
+  const friendly: FriendlyRow[] = rows.map((row) => {
+    const delta =
+      row.house.php != null && row.nep.php != null ? row.house.php - row.nep.php : null;
+    const pct = delta != null && row.nep.php ? (delta / row.nep.php) * 100 : null;
+    return {
+      id: row.id,
+      label: row.label,
+      deltaPhp: delta,
+      pct,
+      currentPhp: row.house.php,
+      baselinePhp: row.nep.php,
+      baselineLabel: 'the President’s proposal',
+      currentLabel: 'the House bill',
+    };
+  });
   return (
     <figure className="chart">
       <figcaption>
         <h3 className="sub-h">{heading}</h3>
         <p>{note}</p>
+        <p className="fine">
+          House bill ({houseScope}): {php(houseTotal)}
+          <span className="sep">·</span>
+          Proposal ({nepScope}): {php(nepTotal)}
+        </p>
       </figcaption>
-      <div className="share" role="table" aria-label={heading}>
-        <div className="share-row share-head" role="row">
-          <span role="columnheader" />
-          <span role="columnheader">House bill<span className="cmp-scope">{houseScope} · {php(houseTotal)}</span></span>
-          <span role="columnheader">NEP<span className="cmp-scope">{nepScope} · {php(nepTotal)}</span></span>
-        </div>
-        {rows.map((row) => (
-          <div className="share-row" role="row" key={row.id}>
-            <span role="rowheader" title={row.title}>
-              {row.label}
-              {row.hint && <span className="cmp-scope">{row.hint}</span>}
-            </span>
-            <ShareCell doc="House bill" money={row.house} total={houseTotal} sw="k-house" />
-            <ShareCell doc="NEP" money={row.nep} total={nepTotal} sw="k-nep" />
+      <FriendlyCompare title={heading} rows={friendly} />
+      <details className="share-details">
+        <summary>Show percent table</summary>
+        <div className="share" role="table" aria-label={heading}>
+          <div className="share-row share-head" role="row">
+            <span role="columnheader" />
+            <span role="columnheader">House bill<span className="cmp-scope">{houseScope} · {php(houseTotal)}</span></span>
+            <span role="columnheader">NEP<span className="cmp-scope">{nepScope} · {php(nepTotal)}</span></span>
           </div>
-        ))}
-      </div>
+          {rows.map((row) => (
+            <div className="share-row" role="row" key={row.id}>
+              <span role="rowheader" title={row.title}>
+                {row.label}
+                {row.hint && <span className="cmp-scope">{row.hint}</span>}
+              </span>
+              <ShareCell doc="House bill" money={row.house} total={houseTotal} sw="k-house" />
+              <ShareCell doc="NEP" money={row.nep} total={nepTotal} sw="k-nep" />
+            </div>
+          ))}
+        </div>
+      </details>
       {footnote && <p className="fine">{footnote}</p>}
     </figure>
   );

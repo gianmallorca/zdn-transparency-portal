@@ -302,7 +302,8 @@ function emptyGaa(): Record<string, number | null> {
   return o;
 }
 
-function gaaLine(client: Client, d: GaaDepartment, r: GaaProgram, reasons: string[], _via: string): AgencyLine {
+function gaaLine(client: Client, d: GaaDepartment, r: GaaProgram, reasons: string[], via: string): AgencyLine {
+  void via;
   const gaa = emptyGaa();
   for (const y of GAA_YEARS) gaa[String(y)] = hasYear(r, y) ? r.years[String(y)].amount : null;
   return {

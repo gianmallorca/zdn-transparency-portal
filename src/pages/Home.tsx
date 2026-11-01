@@ -26,10 +26,10 @@ const SORTS: Record<Sort, { label: string; cmp: (a: ScopedProject, b: ScopedProj
 
 export default function Home() {
   const { scope, overview, config } = usePortal();
-  useTitle(`Every FY 2027 project · ${shortNameOf(config)}`);
+  useTitle(`Full data · ${shortNameOf(config)}`);
   const datasets = overview.status === 'ready' ? overview.value.data.datasets : [];
   return (
-    <main className="page main">
+    <main className="page main" id="full-data">
       <Await state={scope} what="projects">
         {(s) => <Projects scope={s} datasets={datasets} />}
       </Await>
@@ -122,10 +122,11 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
   return (
     <>
       <PageHead
-        eyebrow={<>FY 2027<span className="sep">·</span>NEP (National Expenditure Program) and House Bill 10858<span className="sep">·</span>{name}</>}
+        eyebrow={<>Full data<span className="sep">·</span>FY 2027<span className="sep">·</span>{name}</>}
         title={`${plural(summary.rows, 'project')} for ${name} in the 2027 budget`}
       >
         <Lede />
+        <p className="fine"><Link to="/">Back to the map</Link><span className="sep">·</span><Link to="/story">Story mode</Link></p>
       </PageHead>
 
       <Stats summary={summary} />

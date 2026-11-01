@@ -38,11 +38,15 @@ export default function Agencies() {
 
   useEffect(() => {
     let live = true;
-    setState({ status: 'loading' });
-    loadAgencies(client, (done, total) => live && setProgress({ done, total })).then(
-      (value) => live && setState({ status: 'ready', value }),
-      (error) => live && setState({ status: 'error', error: error instanceof Error ? error : new Error(String(error)) }),
-    );
+    // Async agency rollup; progress callbacks update UI after the fetch starts.
+    const run = () => {
+      setState({ status: 'loading' });
+      loadAgencies(client, (done, total) => live && setProgress({ done, total })).then(
+        (value) => live && setState({ status: 'ready', value }),
+        (error) => live && setState({ status: 'error', error: error instanceof Error ? error : new Error(String(error)) }),
+      );
+    };
+    queueMicrotask(run);
     return () => {
       live = false;
     };

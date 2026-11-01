@@ -5,9 +5,12 @@ import { configProblems } from './config';
 import { usePortal } from './lib/portal-context';
 import About from './pages/About';
 import Agencies from './pages/Agencies';
-import Home from './pages/Home';
+import Data from './pages/Data';
+import Explore from './pages/Explore';
 import Project from './pages/Project';
 import Enacted from './pages/Enacted';
+import Story from './pages/Story';
+import VisualHome from './pages/VisualHome';
 
 export default function App() {
   const { config } = usePortal();
@@ -23,9 +26,12 @@ export default function App() {
         </div>
       )}
       <Routes>
-        <Route path="/" element={<Home />} />
-        {/* Offices and their districts are a section of the main page; old links land there. */}
-        <Route path="/districts" element={<Navigate to="/#offices" replace />} />
+        <Route path="/" element={<VisualHome />} />
+        <Route path="/data" element={<Data />} />
+        <Route path="/explore" element={<Explore />} />
+        <Route path="/story" element={<Story />} />
+        {/* Offices and their districts live on the full-data page; old links land there. */}
+        <Route path="/districts" element={<Navigate to="/data#offices" replace />} />
         <Route path="/gaa" element={<Enacted />} />
         <Route path="/agencies" element={<Agencies />} />
         <Route path="/about" element={<About />} />
@@ -34,7 +40,7 @@ export default function App() {
           path="*"
           element={
             <main className="page main">
-              <p className="state">This page does not exist. <Link to="/">See every project</Link></p>
+              <p className="state">This page does not exist. <Link to="/">Back to the map</Link></p>
             </main>
           }
         />

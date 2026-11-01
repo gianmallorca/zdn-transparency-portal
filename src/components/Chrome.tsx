@@ -8,15 +8,16 @@ import { NATIONAL_URL, SOURCE_CODE_URL } from '../lib/links';
 const BETTERGOV_LOGO = '/brand/bettergov-horizontal-primary.png';
 
 const NAV = [
-  { to: '/', hash: '#projects', label: 'Find projects' },
-  { to: '/', hash: '#charts', label: 'Charts' },
-  { to: '/', hash: '#offices', label: 'Offices and districts' },
+  { to: '/', hash: '', label: 'Map' },
+  { to: '/explore', hash: '', label: 'Explore' },
+  { to: '/story', hash: '', label: 'Story' },
+  { to: '/data', hash: '#projects', label: 'Full data' },
   { to: '/gaa', hash: '', label: 'Budgets 2020–2026' },
   { to: '/agencies', hash: '', label: 'All agencies' },
   { to: '/about', hash: '', label: 'About the data' },
 ];
 
-/** In-page section hashes on `/`. Empty hash counts as Find projects (the list). */
+/** In-page section hashes on `/data`. */
 const IN_PAGE = new Set(['#projects', '#charts', '#offices']);
 
 export function Masthead() {
@@ -88,9 +89,10 @@ export function Masthead() {
         <div className="page subnav-inner" ref={navRef}>
           {NAV.map((n) => {
             const active = pathname === n.to && (
-              n.hash === '#projects' ? (!hash || hash === '#projects')
-              : n.hash ? hash === n.hash
-              : !IN_PAGE.has(hash)
+              n.to === '/data' && n.hash === '#projects'
+                ? (!hash || hash === '#projects' || !IN_PAGE.has(hash))
+                : n.hash ? hash === n.hash
+                : true
             );
             return (
               <Link
@@ -119,6 +121,10 @@ export function Footer() {
         <p className="footer-source">
           Source: NEP FY 2027 and House Bill 10858 · via the BetterGov.ph Budget API
           {meta && <> · data built {date(meta.built_at)}</>}
+        </p>
+        <p className="footer-notice">
+          Population for “per resident” figures: Philippine Statistics Authority, 2020 Census of Population and Housing
+          (municipal counts via PhilAtlas / PSA-derived). Map boundaries: faeldon/philippines-json-maps (OpenStreetMap basemap).
         </p>
         {meta && <p className="footer-notice">{meta.notice}</p>}
         <ul className="footer-links">

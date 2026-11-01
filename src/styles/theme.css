@@ -32,9 +32,18 @@
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  /* Layout */
+  /* Layout — mobile-first gutter; widen on larger screens */
   --page: 1280px;
-  --gutter: 32px;
+  --gutter: 16px;
+  --space: 8px;
+  --tap: 44px;
+}
+
+@media (min-width: 768px) {
+  :root { --gutter: 24px; }
+}
+@media (min-width: 1280px) {
+  :root { --gutter: 32px; }
 }
 
 * { box-sizing: border-box; }
