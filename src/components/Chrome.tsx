@@ -8,23 +8,35 @@ import { NATIONAL_URL, SOURCE_CODE_URL } from '../lib/links';
 const BETTERGOV_LOGO = '/brand/bettergov-horizontal-primary.png';
 
 const NAV = [
-  { to: '/', hash: '', label: '2027 projects' },
+  { to: '/', hash: '#projects', label: 'Find projects' },
   { to: '/', hash: '#charts', label: 'Charts' },
   { to: '/', hash: '#offices', label: 'Offices and districts' },
   { to: '/gaa', hash: '', label: 'Budgets 2020–2026' },
+  { to: '/agencies', hash: '', label: 'All agencies' },
   { to: '/about', hash: '', label: 'About the data' },
 ];
 
-/** In-page sections. The projects link is the top of the page, so these hashes are not "projects". */
-const IN_PAGE = new Set(['#charts', '#offices']);
+/** In-page section hashes on `/`. Empty hash counts as Find projects (the list). */
+const IN_PAGE = new Set(['#projects', '#charts', '#offices']);
 
 export function Masthead() {
   const { config, client } = usePortal();
   const { pathname, hash } = useLocation();
   const navRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLElement>(null);
   useEffect(() => {
     navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   }, [pathname, hash]);
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const apply = () => { root.style.scrollPaddingTop = `${Math.ceil(el.getBoundingClientRect().height)}px`; };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => { observer.disconnect(); root.style.removeProperty('scroll-padding-top'); };
+  }, []);
   const today = useMemo(
     () => new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
     [],
@@ -40,7 +52,7 @@ export function Masthead() {
         </span>
       </a>
     )}
-    <header className="masthead">
+    <header className="masthead" ref={headRef}>
       <div className="masthead-top">
         <div className="page masthead-top-inner">
           <span className="muted">{today}</span>
@@ -75,15 +87,17 @@ export function Masthead() {
       <nav className="subnav" aria-label="Sections">
         <div className="page subnav-inner" ref={navRef}>
           {NAV.map((n) => {
-            const active = pathname === n.to && (n.hash ? hash === n.hash : !IN_PAGE.has(hash));
+            const active = pathname === n.to && (
+              n.hash === '#projects' ? (!hash || hash === '#projects')
+              : n.hash ? hash === n.hash
+              : !IN_PAGE.has(hash)
+            );
             return (
               <Link
                 key={n.label}
                 to={{ pathname: n.to, hash: n.hash }}
                 className={active ? 'active' : undefined}
                 aria-current={active ? 'page' : undefined}
-                // "Projects" from further down the same page goes back to the top.
-                onClick={() => !n.hash && pathname === n.to && window.scrollTo(0, 0)}
               >
                 {n.label}
               </Link>

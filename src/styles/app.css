@@ -33,7 +33,12 @@
 .build-strip-url { font-family: var(--font-mono); font-weight: 500; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.55); }
 
 /* ---------- Masthead ---------- */
-.masthead { background: var(--paper); }
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+}
 .masthead-top { border-bottom: 1px solid var(--rule-soft); font-family: var(--font-hero); font-size: 12px; font-weight: 600; }
 .masthead-top-inner { display: flex; justify-content: space-between; gap: 16px; padding-top: 8px; padding-bottom: 8px; }
 .masthead-links { display: flex; gap: 18px; flex-wrap: wrap; justify-content: flex-end; }
@@ -106,10 +111,11 @@
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0 0 40px;
+  margin: 0 0 12px;
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--rule);
 }
+.stats-cue { margin: 0 0 40px; }
 .stats > div { padding: 16px 20px 18px; border-right: 1px solid var(--rule); }
 .stats > div:first-child { padding-left: 0; }
 .stats > div:last-child { border-right: none; }
@@ -484,7 +490,7 @@ code { font-family: var(--font-mono); font-size: 0.9em; background: var(--paper-
 }
 
 /* ---------- Charts ---------- */
-#charts, #office-trend { scroll-margin-top: 16px; }
+#charts, #offices, #projects, #office-trend { scroll-margin-top: 16px; }
 .chart { margin: 26px 0 4px; }
 .chart p { margin: 6px 0 12px; max-width: 860px; color: var(--ink-2); font-size: 14.5px; }
 .chart .fine { margin-top: 8px; }
@@ -574,6 +580,9 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
 
 .trend-scroll { overflow-x: auto; max-width: 100%; min-width: 0; }
 .trend-scroll svg { display: block; width: 100%; height: auto; font-family: var(--font-mono); }
+@media (min-width: 721px) {
+  .trend-scroll svg { max-width: 680px; }
+}
 .trend-stack { display: none; list-style: none; margin: 0; padding: 0; }
 .trend-stack-name { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-weight: 600; }
 .trend-stack ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -605,4 +614,30 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
   .bar-v { order: 3; text-align: right; font-size: 12px; overflow: visible; }
   .bar-fill { top: 0; right: auto; height: 100%; width: var(--p, 0%); }
   .congresses { display: none; }
+}
+
+/* All agencies ----------------------------------------------------------- */
+.ag-share { margin: 8px 0 20px; }
+.ag-share-row {
+  display: grid;
+  grid-template-columns: minmax(88px, 140px) minmax(0, 1fr) minmax(110px, 150px);
+  gap: 8px 14px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid var(--rule-soft);
+}
+.ag-share-label { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-share-track { height: 12px; background: var(--paper-2); }
+.ag-share-fill { display: block; height: 100%; width: var(--p, 0%); background: var(--accent); }
+.ag-share-fill.k-nep {
+  background: repeating-linear-gradient(135deg, var(--accent) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.ag-share-fig { text-align: right; font-size: 13px; }
+.ag-dept .tr, .ag-lines .tr { grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(72px, 0.55fr)) minmax(56px, 0.35fr); }
+.ag-lines .tr { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(72px, 0.5fr)); }
+@media (max-width: 860px) {
+  .ag-share-row { grid-template-columns: 1fr auto; }
+  .ag-share-track { grid-column: 1 / -1; }
+  .ag-dept .tr, .ag-lines .tr { grid-template-columns: 1fr; }
 }

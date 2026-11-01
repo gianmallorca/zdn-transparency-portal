@@ -4,6 +4,7 @@ import ScrollToTop from './components/ScrollToTop';
 import { configProblems } from './config';
 import { usePortal } from './lib/portal-context';
 import About from './pages/About';
+import Agencies from './pages/Agencies';
 import Home from './pages/Home';
 import Project from './pages/Project';
 import Enacted from './pages/Enacted';
@@ -26,6 +27,7 @@ export default function App() {
         {/* Offices and their districts are a section of the main page; old links land there. */}
         <Route path="/districts" element={<Navigate to="/#offices" replace />} />
         <Route path="/gaa" element={<Enacted />} />
+        <Route path="/agencies" element={<Agencies />} />
         <Route path="/about" element={<About />} />
         <Route path="/projects/:dataset/:id" element={<Project />} />
         <Route

@@ -11,6 +11,10 @@ import type { ScopeResult } from '../lib/scope';
 import { departmentShort, loadGaa, type GaaResult } from '../lib/gaa';
 import type { Async } from '../lib/portal-context';
 import { useTitle } from '../lib/use-title';
+import {
+  ZDN_EXTRA_QUERIES, ZDN_FALSE_PLACES, ZDN_GAA_AGENCIES, ZDN_KNOWN_UNITS, ZDN_MATCH_RULES,
+  ZDN_PLACES, ZDN_PRIMARY_QUERIES,
+} from '../lib/zdn';
 
 /** The API's `rules`, in words for readers rather than developers. */
 const READING_RULES = [
@@ -88,6 +92,40 @@ function AboutView({ scope, overview }: { scope: ScopeResult; overview: Overview
       </section>
 
       <GaaQuestions />
+
+      <section className="section" aria-labelledby="zdn-match-h">
+        <h2 id="zdn-match-h" className="section-h">Matching lines to Zamboanga del Norte (all agencies)</h2>
+        <p>
+          The <Link to="/agencies">All agencies</Link> page reads every department in the NEP FY2027 rollups and the
+          GAA FY2020–2026 program lists, plus the four House-bill project programs. A line is kept only when the rules
+          below say it belongs to this province. Nothing is invented for lump sums that have no location.
+        </p>
+        <ul className="plain-list">
+          {ZDN_MATCH_RULES.map((r) => <li key={r}>{r}</li>)}
+        </ul>
+        <h3 className="sub-h">Places and units used</h3>
+        <ul className="plain-list fine-list">
+          <li>
+            <strong>API title searches:</strong> {ZDN_PRIMARY_QUERIES.join('; ')}
+            {ZDN_EXTRA_QUERIES.length > 0 && <> · plus municipality searches on DPWH, DA and DOH: {ZDN_EXTRA_QUERIES.join('; ')}</>}
+          </li>
+          <li>
+            <strong>Client-side place names:</strong>{' '}
+            {ZDN_PLACES.map((p) => p.label).join('; ')}
+          </li>
+          <li>
+            <strong>Known ZDN units:</strong>{' '}
+            {ZDN_KNOWN_UNITS.map((u) => u.label).join('; ')}
+          </li>
+          <li>
+            <strong>Whole GAA agencies loaded:</strong>{' '}
+            {ZDN_GAA_AGENCIES.map((a) => a.label).join('; ')}
+          </li>
+          <li>
+            <strong>Excluded place names:</strong> {ZDN_FALSE_PLACES.join('; ')}
+          </li>
+        </ul>
+      </section>
 
       <section className="section" aria-labelledby="x-h">
         <h2 id="x-h" className="section-h">2027 lines removed by hand: {count(scope.excluded.length)}</h2>

@@ -299,3 +299,46 @@ export interface GaaProgram {
   ids_count: number;
   years: GaaYears;
 }
+
+// ---------------------------------------------------------------------------
+// NEP FY2027 (/api/v1/nep/2027): the Executive's proposal
+// ---------------------------------------------------------------------------
+
+export interface NepEnvelope<T> {
+  meta: {
+    dataset: 'nep';
+    fiscal_year: number;
+    baseline_year?: number;
+    currency: 'PHP';
+    scale: 'pesos';
+    department_id?: string;
+    dimension?: string;
+    limit?: number;
+    total_items?: number;
+    [key: string]: unknown;
+  };
+  data: T;
+  next_cursor?: string | null;
+}
+
+export interface NepDepartment {
+  id: string;
+  description: string;
+  amount: number;
+  base_amount?: number;
+  delta?: number;
+  pct?: number | null;
+  [key: string]: unknown;
+}
+
+/** One code in a NEP rollup (agency, operating unit, program, region, …). */
+export interface NepRollupRow {
+  code: string;
+  description: string;
+  extra: string | null;
+  count: number;
+  amount: number;
+  base_amount: number;
+  delta: number;
+  pct: number | null;
+}

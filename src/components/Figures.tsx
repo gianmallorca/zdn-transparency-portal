@@ -32,9 +32,8 @@ export default function Figures({ projects }: { projects: ScopedProject[] }) {
     <section className="section" id="charts" aria-labelledby="charts-h">
       <h2 id="charts-h" className="section-h">The same figures, set side by side</h2>
       <p className="section-lede">
-        Each chart uses amounts already published for this province. The NEP and the House bill are two versions of the 2027
-        budget: they are compared, never added. A dash means that document has no such figure, not zero. Lines that appear in
-        only one version are candidates to check, not confirmed insertions or deletions.
+        The same amounts as above, drawn side by side so NEP and House bill stay two columns—never one total.{' '}
+        <Link to="/about#r-h">How to read these figures</Link>
       </p>
 
       <Await state={districts} what="office charts">
@@ -367,8 +366,8 @@ function RankedList({
 }
 
 const TREND_W = 800;
-const TREND_H = 280;
-const TREND_PAD = { l: 64, r: 16, t: 16, b: 32 };
+const TREND_H = 200;
+const TREND_PAD = { l: 64, r: 16, t: 12, b: 28 };
 
 export function OfficeTrend({ offices }: { offices: DistrictOffice[] }) {
   const series = officeTrends(offices);

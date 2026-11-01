@@ -7,7 +7,8 @@
  */
 import type { DatasetKey } from '../config';
 import type {
-  DistrictCard, DistrictList, Envelope, GaaDepartment, GaaEnvelope, GaaProgram, Overview, ProjectDetail, ProjectList, ProjectRow,
+  DistrictCard, DistrictList, Envelope, GaaDepartment, GaaEnvelope, GaaProgram, NepDepartment, NepEnvelope, NepRollupRow,
+  Overview, ProjectDetail, ProjectList, ProjectRow,
 } from './types';
 
 /** The API's page-size ceiling for project lists. */
@@ -18,6 +19,8 @@ export const MAX_ROWS_PER_QUERY = 4000;
 export const GAA_PAGE_SIZE = 500;
 /** A place matching more GAA program families than this in one department is cut there, and said so. */
 export const MAX_GAA_PROGRAMS = 6000;
+/** NEP rollup page size (API max 2000). */
+export const NEP_PAGE_SIZE = 2000;
 
 export type Params = Record<string, string | number | undefined>;
 
@@ -47,7 +50,11 @@ export interface Client {
   /** GAA FY2020–2026: the departments. */
   gaaDepartments(): Promise<GaaEnvelope<GaaDepartment[]>>;
   /** GAA FY2020–2026: every program family in one department whose name matches q, all years, page by page. */
-  gaaPrograms(departmentId: string, q: string): Promise<{ first: GaaEnvelope<GaaProgram[]>; rows: GaaProgram[]; truncated: boolean }>;
+  gaaPrograms(departmentId: string, q: string, extra?: Params): Promise<{ first: GaaEnvelope<GaaProgram[]>; rows: GaaProgram[]; truncated: boolean }>;
+  /** NEP FY2027: every department. */
+  nepDepartments(): Promise<NepEnvelope<NepDepartment[]>>;
+  /** NEP FY2027: full rollup for one department and dimension, every page. */
+  nepRollup(departmentId: string, dimension: string): Promise<{ first: NepEnvelope<NepRollupRow[]>; rows: NepRollupRow[] }>;
 }
 
 const ROOT = '/api/v1/hgab/2027';
@@ -91,18 +98,32 @@ export function createClient(base: string): Client {
 
   const get = <T,>(path: string, params: Params = {}) => json<Envelope<T>>(path, params);
 
-  async function gaaPrograms(departmentId: string, q: string) {
+  async function gaaPrograms(departmentId: string, q: string, extra: Params = {}) {
     const path = `/api/v1/gaa/departments/${departmentId}/programs`;
-    const first = await json<GaaEnvelope<GaaProgram[]>>(path, { q, limit: GAA_PAGE_SIZE });
+    const base = { ...extra, ...(q ? { q } : {}), limit: GAA_PAGE_SIZE };
+    const first = await json<GaaEnvelope<GaaProgram[]>>(path, base);
     const rows = [...first.data];
     let cursor = first.next_cursor;
     // The cursor chains pages, so they are fetched one after another.
     while (cursor && rows.length < MAX_GAA_PROGRAMS) {
-      const page = await json<GaaEnvelope<GaaProgram[]>>(path, { q, limit: GAA_PAGE_SIZE, cursor });
+      const page = await json<GaaEnvelope<GaaProgram[]>>(path, { ...base, cursor });
       rows.push(...page.data);
       cursor = page.next_cursor;
     }
     return { first, rows, truncated: Boolean(cursor) };
+  }
+
+  async function nepRollup(departmentId: string, dimension: string) {
+    const path = `/api/v1/nep/2027/departments/${departmentId}/rollups/${dimension}`;
+    const first = await json<NepEnvelope<NepRollupRow[]>>(path, { limit: NEP_PAGE_SIZE });
+    const rows = [...first.data];
+    let cursor = first.next_cursor;
+    while (cursor) {
+      const page = await json<NepEnvelope<NepRollupRow[]>>(path, { limit: NEP_PAGE_SIZE, cursor });
+      rows.push(...page.data);
+      cursor = page.next_cursor;
+    }
+    return { first, rows };
   }
 
   async function allProjects(dataset: DatasetKey, filters: Params) {
@@ -128,6 +149,8 @@ export function createClient(base: string): Client {
     href,
     gaaDepartments: () => json<GaaEnvelope<GaaDepartment[]>>('/api/v1/gaa/departments'),
     gaaPrograms,
+    nepDepartments: () => json<NepEnvelope<NepDepartment[]>>('/api/v1/nep/2027/departments'),
+    nepRollup,
     overview: () => get<Overview>(''),
     allProjects,
     project: (dataset, id) => get<ProjectDetail>(`/datasets/${dataset}/projects/${encodeURIComponent(id)}`),

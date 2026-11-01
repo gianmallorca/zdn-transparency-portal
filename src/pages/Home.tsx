@@ -8,6 +8,7 @@ import { PageHead } from '../components/Chrome';
 import Figures from '../components/Figures';
 import OfficesSection from '../components/OfficesSection';
 import { projectsCsv, downloadText } from '../lib/csv';
+import { PROGRAM_PLAIN } from '../lib/charts';
 import { count, php, phpDelta, plural } from '../lib/format';
 import { usePortal } from '../lib/portal-context';
 import { summarise, type ScopedProject, type ScopeResult, type Summary } from '../lib/scope';
@@ -52,7 +53,7 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
   const { config, districts } = usePortal();
   const { hash } = useLocation();
 
-  // #offices and #projects links land on their section once it has rendered.
+  // In-page hashes (#projects, #charts, #offices) land once the section is ready.
   useEffect(() => {
     if (!hash) return;
     document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
@@ -121,17 +122,19 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
   return (
     <>
       <PageHead
-        eyebrow={<>FY 2027<span className="sep">·</span>NEP and House Bill 10858<span className="sep">·</span>{name}</>}
+        eyebrow={<>FY 2027<span className="sep">·</span>NEP (National Expenditure Program) and House Bill 10858<span className="sep">·</span>{name}</>}
         title={`${plural(summary.rows, 'project')} for ${name} in the 2027 budget`}
       >
-        <Lede summary={summary} />
+        <Lede />
       </PageHead>
 
-      <Stats summary={summary} programName={programName} />
-
-      <Figures projects={all} />
-
-      <OfficesSection />
+      <Stats summary={summary} />
+      <p className="fine stats-cue">
+        Compare the NEP and the House bill; never add them.{' '}
+        <Link to="/about#r-h">How to read these figures</Link>
+        {' · '}
+        <Link to="/agencies">All agencies for {name}</Link>
+      </p>
 
       <section className="section" aria-labelledby="groups-h">
         <h2 id="groups-h" className="section-h">What the House bill did to them</h2>
@@ -247,6 +250,10 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
         </p>
       </section>
 
+      <Figures projects={all} />
+
+      <OfficesSection />
+
       <Disclaimers items={disclaimers} compact />
     </>
   );
@@ -268,29 +275,19 @@ function groupAmount(g: BridgeGroup, c: { nep_php: number; house_php: number; ro
   }
 }
 
-function Lede({ summary }: { summary: Summary }) {
-  const added = summary.groups.house_only.rows;
-  const dropped = summary.groups.nep_only.rows;
+function Lede() {
   return (
     <p>
-      The NEP lists {count(summary.nep.rows)} of them, for {php(summary.nep.php)}; the House bill lists{' '}
-      {count(summary.house.rows)}, for {php(summary.house.php)}.{' '}
-      {added || dropped ? (
-        <>
-          {plural(added, 'project is', 'projects are')} in the House bill only and {count(dropped)} in the NEP only: candidates
-          to check, not confirmed changes.
-        </>
-      ) : (
-        <>Every project is in both.</>
-      )}
+      Every FY 2027 budget line this portal covers for this place, compared across the NEP (the budget the President
+      submits) and the House bill. Search below for a barangay, road, school or office.
     </p>
   );
 }
 
-function Stats({ summary, programName }: { summary: Summary; programName: (k: DatasetKey) => string }) {
+function Stats({ summary }: { summary: Summary }) {
   const programs = (Object.entries(summary.byDataset) as [DatasetKey, { rows: number }][])
     .sort((a, b) => b[1].rows - a[1].rows)
-    .map(([k, c]) => `${programName(k)} ${count(c.rows)}`)
+    .map(([k, c]) => `${PROGRAM_PLAIN[k]} ${count(c.rows)}`)
     .join(' · ');
   return (
     <dl className="stats">
@@ -312,7 +309,7 @@ function Stats({ summary, programName }: { summary: Summary; programName: (k: Da
       <div>
         <dt className="label">In the House bill only</dt>
         <dd className="stat num">{count(summary.groups.house_only.rows)}</dd>
-        <dd className="stat-sub">{php(summary.groups.house_only.house_php)} · insertion candidates</dd>
+        <dd className="stat-sub">{php(summary.groups.house_only.house_php)} · only in the House bill · check, not confirmed</dd>
       </div>
     </dl>
   );
