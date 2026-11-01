@@ -1923,3 +1923,11 @@ ul.legend li { display: inline-flex; align-items: center; gap: 6px; }
   .masthead-with { display: none; }
   .subnav a { font-size: 13px; min-height: 44px; }
 }
+
+/* Mobile: half-height map, town picker above it */
+@media (max-width: 720px) {
+  .province-map { display: flex; flex-direction: column; }
+  .province-map .map-town-select { order: -1; margin: 0 0 var(--space); }
+  .province-map-canvas { height: min(35vh, 260px); min-height: 220px; }
+  .map-skeleton { min-height: 220px; }
+}
