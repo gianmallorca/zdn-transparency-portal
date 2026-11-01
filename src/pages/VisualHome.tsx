@@ -1,9 +1,11 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import { Await } from '../components/Bits';
 import QuestionEntry from '../components/visual/QuestionEntry';
 import RelatableStat from '../components/visual/RelatableStat';
 import TownPanel from '../components/visual/TownPanel';
+import TownPickButton from '../components/visual/TownPickButton';
 import InfoTip from '../components/visual/InfoTip';
 import { shortNameOf } from '../config';
 import { count, plural } from '../lib/format';
@@ -28,11 +30,27 @@ export default function VisualHome() {
 }
 
 function HomeBody({ projects }: { projects: import('../lib/scope').ScopedProject[] }) {
-  const { config } = usePortal();
+  const { config, client } = usePortal();
   const name = shortNameOf(config);
   const summary = useMemo(() => summarise(projects), [projects]);
   const { towns, districtWide, unmapped } = useMemo(() => groupByTown(projects), [projects]);
   const [bucket, setBucket] = useState<TownBucket | null>(null);
+  const [pointsNote, setPointsNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    client
+      .datasetRegions('dpwh')
+      .then((res) => {
+        if (!cancelled) setPointsNote(res.data?.points_note ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setPointsNote(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
 
   const onSelectTown = useCallback((id: TownId) => {
     const found = towns.find((t) => t.townId === id);
@@ -73,7 +91,7 @@ function HomeBody({ projects }: { projects: import('../lib/scope').ScopedProject
         />
         <div className="relatable-stat">
           <dt className="label">Projects</dt>
-          <dd className="stat num">{count(summary.rows)}</dd>
+          <dd className="stat"><span className="stat-primary">{count(summary.rows)}</span></dd>
           <dd className="stat-sub muted">{count(summary.groups.house_only.rows)} added only in the House bill</dd>
         </div>
       </dl>
@@ -81,7 +99,7 @@ function HomeBody({ projects }: { projects: import('../lib/scope').ScopedProject
       <section className="section map-section" aria-labelledby="map-h">
         <div className="map-section-head">
           <h2 id="map-h" className="section-h">Projects by town</h2>
-          <InfoTip>
+          <InfoTip label="How to read this" title="About the map">
             Each municipality is shaded by total proposed funding in this portal’s live BetterGov data.
             Projects we cannot place in a town are listed under District-wide for their DPWH office.
           </InfoTip>
@@ -91,6 +109,7 @@ function HomeBody({ projects }: { projects: import('../lib/scope').ScopedProject
             projects={projects}
             selectedTownId={bucket && bucket.townId !== '__district_wide__' ? bucket.townId : null}
             onSelectTown={onSelectTown}
+            pointsNote={pointsNote}
           />
         </Suspense>
 
@@ -100,10 +119,12 @@ function HomeBody({ projects }: { projects: import('../lib/scope').ScopedProject
             <ul className="district-wide-list">
               {districtWide.map((b) => (
                 <li key={b.label}>
-                  <button type="button" className="district-wide-btn" onClick={() => setBucket(b)}>
-                    <span>{b.label}</span>
-                    <span className="muted">{plural(b.projects.length, 'project')}</span>
-                  </button>
+                  <TownPickButton
+                    label={b.label}
+                    bucket={b}
+                    active={bucket?.label === b.label}
+                    onPick={setBucket}
+                  />
                 </li>
               ))}
             </ul>
@@ -119,9 +140,27 @@ function HomeBody({ projects }: { projects: import('../lib/scope').ScopedProject
       <section className="section" aria-labelledby="more-h">
         <h2 id="more-h" className="section-h">Go deeper</h2>
         <div className="deep-links">
-          <Link className="question-btn" to="/story">Story mode — how this budget is made</Link>
-          <Link className="question-btn" to="/data">See the full data — tables and charts</Link>
-          <Link className="question-btn" to="/explore?focus=changed">What changed from last year?</Link>
+          <Link className="click-box question-btn" to="/story">
+            <span className="click-box-copy">
+              <span className="click-box-title">Story mode</span>
+              <span className="click-box-sub">How this budget is made</span>
+            </span>
+            <ChevronRight className="click-box-chevron" size={18} strokeWidth={2.25} aria-hidden="true" />
+          </Link>
+          <Link className="click-box question-btn" to="/data">
+            <span className="click-box-copy">
+              <span className="click-box-title">See the full data</span>
+              <span className="click-box-sub">Tables and charts</span>
+            </span>
+            <ChevronRight className="click-box-chevron" size={18} strokeWidth={2.25} aria-hidden="true" />
+          </Link>
+          <Link className="click-box question-btn" to="/explore?focus=changed">
+            <span className="click-box-copy">
+              <span className="click-box-title">What changed from last year?</span>
+              <span className="click-box-sub">Office-by-office comparison</span>
+            </span>
+            <ChevronRight className="click-box-chevron" size={18} strokeWidth={2.25} aria-hidden="true" />
+          </Link>
         </div>
       </section>
 

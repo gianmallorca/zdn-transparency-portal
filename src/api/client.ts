@@ -7,8 +7,10 @@
  */
 import type { DatasetKey } from '../config';
 import type {
-  DistrictCard, DistrictList, Envelope, GaaDepartment, GaaEnvelope, GaaProgram, NepDepartment, NepEnvelope, NepRollupRow,
-  Overview, ProjectDetail, ProjectList, ProjectRow,
+  DistrictCard, DistrictList, Envelope, GaaDepartment, GaaEnvelope, GaaProgram, GaaSearchRow,
+  HearingEnvelope, HearingHit, HearingRow, HgabDocument,
+  NepDepartment, NepEnvelope, NepRollupRow, Overview, ProjectDetail, ProjectList, ProjectRow,
+  RegionsInfo,
 } from './types';
 
 /** The API's page-size ceiling for project lists. */
@@ -55,6 +57,18 @@ export interface Client {
   nepDepartments(): Promise<NepEnvelope<NepDepartment[]>>;
   /** NEP FY2027: full rollup for one department and dimension, every page. */
   nepRollup(departmentId: string, dimension: string): Promise<{ first: NepEnvelope<NepRollupRow[]>; rows: NepRollupRow[] }>;
+  /** House budget hearings list. */
+  hearings(params?: Params): Promise<HearingEnvelope<HearingRow[]>>;
+  /** Search deliberation topics / spoken moments. */
+  hearingSearch(q: string, params?: Params): Promise<HearingEnvelope<HearingHit[]>>;
+  /** Cross-department GAA name search (max 100 rows, no paging). */
+  gaaSearch(q: string, year?: number): Promise<GaaEnvelope<GaaSearchRow[]>>;
+  /** Source PDFs for the 2027 comparison. */
+  documents(): Promise<Envelope<HgabDocument[]>>;
+  /** NEP FY2027 national region rollup. */
+  nepRegionRollup(): Promise<NepEnvelope<NepRollupRow[]>>;
+  /** Per-region map totals for one HGAB dataset. */
+  datasetRegions(key: DatasetKey): Promise<Envelope<RegionsInfo>>;
 }
 
 const ROOT = '/api/v1/hgab/2027';
@@ -156,5 +170,11 @@ export function createClient(base: string): Client {
     project: (dataset, id) => get<ProjectDetail>(`/datasets/${dataset}/projects/${encodeURIComponent(id)}`),
     district: (id) => get<DistrictCard>(`/districts/${encodeURIComponent(id)}`),
     districts: (params = {}) => get<DistrictList>('/districts', params),
+    hearings: (params = {}) => json<HearingEnvelope<HearingRow[]>>('/api/v1/hearings', params),
+    hearingSearch: (q, params = {}) => json<HearingEnvelope<HearingHit[]>>('/api/v1/hearings/search', { q, ...params }),
+    gaaSearch: (q, year) => json<GaaEnvelope<GaaSearchRow[]>>('/api/v1/gaa/search', { q, ...(year != null ? { year } : {}) }),
+    documents: () => get<HgabDocument[]>('/documents'),
+    nepRegionRollup: () => json<NepEnvelope<NepRollupRow[]>>('/api/v1/nep/2027/rollups/region'),
+    datasetRegions: (key) => get<RegionsInfo>(`/datasets/${key}/regions`),
   };
 }

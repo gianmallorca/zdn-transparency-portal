@@ -342,3 +342,120 @@ export interface NepRollupRow {
   delta: number;
   pct: number | null;
 }
+
+// ---------------------------------------------------------------------------
+// Hearings (/api/v1/hearings): House budget briefings
+// ---------------------------------------------------------------------------
+
+export interface HearingEnvelope<T> {
+  meta: {
+    dataset: 'hearings';
+    currency: 'PHP';
+    scale: 'pesos';
+    q?: string;
+    limit?: number;
+    offset?: number;
+    returned?: number;
+    note?: string;
+    [key: string]: unknown;
+  };
+  data: T;
+}
+
+export interface HearingRow {
+  video_id: string;
+  title: string;
+  agency: string;
+  fiscal_year: string;
+  hearing_date: string;
+  duration_seconds: number;
+  youtube_url: string;
+  page_url: string;
+  has_transcript: boolean;
+  has_record: boolean;
+  topic_count: number;
+  status: string;
+}
+
+export interface HearingMoment {
+  seconds: number;
+  timestamp: string;
+  speaker: string;
+  side: string;
+  kind: string;
+  said: string;
+  url: string;
+}
+
+export interface HearingHit {
+  hearing: {
+    video_id: string;
+    title: string;
+    agency: string;
+    hearing_date: string;
+    fiscal_year: string;
+    page_url: string;
+  };
+  topic: {
+    video_id: string;
+    index: number;
+    topic: string;
+    status: string;
+    summary: string;
+    question: string;
+    agency_position: string;
+    outcome: string;
+    timestamp: string;
+    url: string;
+  };
+  matching_moments: HearingMoment[];
+}
+
+// ---------------------------------------------------------------------------
+// GAA search (/api/v1/gaa/search): cross-department, capped at 100
+// ---------------------------------------------------------------------------
+
+export interface GaaSearchRow {
+  department_id: string;
+  agency_id: string;
+  fam_key: string;
+  name: string;
+  ids_count: number;
+  department: string;
+  years: GaaYears;
+}
+
+// ---------------------------------------------------------------------------
+// HGAB documents + region map (/api/v1/hgab/2027/…)
+// ---------------------------------------------------------------------------
+
+export interface HgabDocument {
+  key: string;
+  title: string;
+  stage: string;
+  stage_label: string;
+  reading: number | null;
+  volume: string | null;
+  pages: { from: number; to: number };
+  source_url: string | null;
+  notes: string | null;
+}
+
+export interface RegionPoint {
+  key: string;
+  label: string;
+  name: string;
+  nep_php: number | null;
+  house_php: number | null;
+  delta_php: number | null;
+  nep_rows: number;
+  house_rows: number;
+}
+
+export interface RegionsInfo {
+  house_stage: string;
+  placeable: boolean;
+  note: string;
+  points_note: string;
+  regions: RegionPoint[];
+}

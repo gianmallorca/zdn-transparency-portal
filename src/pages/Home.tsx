@@ -14,7 +14,7 @@ import { usePortal } from '../lib/portal-context';
 import { summarise, type ScopedProject, type ScopeResult, type Summary } from '../lib/scope';
 import { useTitle } from '../lib/use-title';
 
-const PAGE = 100;
+const PAGE = 50;
 
 type Sort = 'house' | 'nep' | 'change' | 'title';
 const SORTS: Record<Sort, { label: string; cmp: (a: ScopedProject, b: ScopedProject) => number }> = {
@@ -78,14 +78,14 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
   const why = params.get('why') ?? '';
   const office = params.get('office') ?? '';
   const sort = (params.get('sort') as Sort) in SORTS ? (params.get('sort') as Sort) : 'house';
-  const [shown, setShown] = useState(PAGE);
+  const [page, setPage] = useState(1);
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
     setParams(next, { replace: true });
-    setShown(PAGE);
+    setPage(1);
   };
 
   // DPWH offices among the rows, largest first, for the Office filter.
@@ -118,6 +118,11 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
   }, [all, q, program, status, why, office, sort]);
   const filteredSummary = useMemo(() => summarise(filtered), [filtered]);
   const narrowed = filtered.length !== all.length;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE));
+  const safePage = Math.min(page, pageCount);
+  const from = filtered.length === 0 ? 0 : (safePage - 1) * PAGE + 1;
+  const to = Math.min(safePage * PAGE, filtered.length);
+  const pageRows = filtered.slice((safePage - 1) * PAGE, safePage * PAGE);
 
   return (
     <>
@@ -228,21 +233,41 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
             These {count(filtered.length)}: NEP {php(filteredSummary.nep.php)} on {count(filteredSummary.nep.rows)}
             <span className="sep">·</span>House bill {php(filteredSummary.house.php)} on {count(filteredSummary.house.rows)}
             <span className="sep">·</span>
-            <button type="button" className="link-button" onClick={() => { setParams(new URLSearchParams(), { replace: true }); setShown(PAGE); }}>
+            <button type="button" className="link-button" onClick={() => { setParams(new URLSearchParams(), { replace: true }); setPage(1); }}>
               Clear filters
             </button>
           </p>
         )}
 
-        <ProjectTable rows={filtered.slice(0, shown)} programName={programName} />
+        <ProjectTable rows={pageRows} programName={programName} />
 
         {filtered.length === 0 && <p className="state">No project matches. Try fewer words or clear the filters.</p>}
-        {filtered.length > shown && (
-          <div className="more">
-            <span className="muted">Showing {count(shown)} of {count(filtered.length)}</span>
-            <button type="button" className="button" onClick={() => setShown((n) => n + PAGE)}>Show {count(Math.min(PAGE, filtered.length - shown))} more</button>
-            <button type="button" className="button button-quiet" onClick={() => setShown(filtered.length)}>Show all</button>
-          </div>
+        {filtered.length > PAGE && (
+          <nav className="pager" aria-label="Project list pages">
+            <span className="muted">
+              {count(from)}–{count(to)} of {count(filtered.length)}
+              <span className="sep">·</span>
+              Page {count(safePage)} of {count(pageCount)}
+            </span>
+            <div className="pager-actions">
+              <button
+                type="button"
+                className="button button-quiet"
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => Math.max(1, Math.min(p, pageCount) - 1))}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="button"
+                disabled={safePage >= pageCount}
+                onClick={() => setPage((p) => Math.min(pageCount, Math.min(p, pageCount) + 1))}
+              >
+                Next
+              </button>
+            </div>
+          </nav>
         )}
 
         <p className="fine">

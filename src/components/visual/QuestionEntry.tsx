@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Building2, HeartPulse, MapPinned, Scale } from 'lucide-react';
+import { Building2, ChevronRight, HeartPulse, MapPinned, Scale } from 'lucide-react';
 
 const QUESTIONS = [
   {
@@ -37,10 +37,15 @@ export default function QuestionEntry() {
         {QUESTIONS.map((q) => {
           const Icon = q.icon;
           return (
-            <Link key={q.to} to={q.to} className="question-btn">
-              <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
-              <span className="question-label">{q.label}</span>
-              <span className="question-hint muted">{q.hint}</span>
+            <Link key={q.to} to={q.to} className="click-box question-btn">
+              <span className="question-btn-icon" aria-hidden="true">
+                <Icon size={20} strokeWidth={1.75} />
+              </span>
+              <span className="click-box-copy">
+                <span className="click-box-title question-label">{q.label}</span>
+                <span className="click-box-sub question-hint">{q.hint}</span>
+              </span>
+              <ChevronRight className="click-box-chevron" size={18} strokeWidth={2.25} aria-hidden="true" />
             </Link>
           );
         })}

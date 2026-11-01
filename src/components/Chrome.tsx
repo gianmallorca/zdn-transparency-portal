@@ -11,9 +11,9 @@ const NAV = [
   { to: '/', hash: '', label: 'Map' },
   { to: '/explore', hash: '', label: 'Explore' },
   { to: '/story', hash: '', label: 'Story' },
-  { to: '/data', hash: '#projects', label: 'Full data' },
+  { to: '/data', hash: '#projects', label: '2027 projects' },
+  { to: '/data', hash: '#offices', label: 'Offices and districts' },
   { to: '/gaa', hash: '', label: 'Budgets 2020–2026' },
-  { to: '/agencies', hash: '', label: 'All agencies' },
   { to: '/about', hash: '', label: 'About the data' },
 ];
 
@@ -88,12 +88,14 @@ export function Masthead() {
       <nav className="subnav" aria-label="Sections">
         <div className="page subnav-inner" ref={navRef}>
           {NAV.map((n) => {
-            const active = pathname === n.to && (
-              n.to === '/data' && n.hash === '#projects'
-                ? (!hash || hash === '#projects' || !IN_PAGE.has(hash))
-                : n.hash ? hash === n.hash
-                : true
-            );
+            const active =
+              n.to === '/' && !n.hash
+                ? pathname === '/'
+                : n.to === '/data' && n.hash === '#projects'
+                  ? pathname === '/data' && (!hash || hash === '#projects' || !IN_PAGE.has(hash))
+                  : n.hash
+                    ? pathname === n.to && hash === n.hash
+                    : pathname === n.to && !IN_PAGE.has(hash);
             return (
               <Link
                 key={n.label}
@@ -115,23 +117,15 @@ export function Masthead() {
 export function Footer() {
   const { config, scope, client } = usePortal();
   const meta = scope.status === 'ready' ? scope.value.meta : null;
+  const short = shortNameOf(config);
   return (
     <footer className="footer">
       <div className="page footer-inner">
-        <p className="footer-source">
-          Source: NEP FY 2027 and House Bill 10858 · via the BetterGov.ph Budget API
-          {meta && <> · data built {date(meta.built_at)}</>}
-        </p>
-        <p className="footer-notice">
-          Population for “per resident” figures: Philippine Statistics Authority, 2020 Census of Population and Housing
-          (municipal counts via PhilAtlas / PSA-derived). Map boundaries: faeldon/philippines-json-maps (OpenStreetMap basemap).
-        </p>
-        {meta && <p className="footer-notice">{meta.notice}</p>}
-        <ul className="footer-links">
-          <li>
-            <span className="label">This portal</span>
-            <span>
-              {shortNameOf(config)}, run by{' '}
+        <div className="footer-brand">
+          <div className="footer-brand-copy">
+            <p className="footer-brand-name">{config.name}</p>
+            <p className="footer-brand-sub">
+              Independent reading of the published 2027 budget documents for {short}, run by{' '}
               {config.operator.url ? (
                 <a href={config.operator.url} target="_blank" rel="noopener">{config.operator.name}</a>
               ) : (
@@ -140,10 +134,25 @@ export function Footer() {
               {config.operator.email && (
                 <> · <a href={`mailto:${config.operator.email}`}>{config.operator.email}</a></>
               )}
-            </span>
-          </li>
+            </p>
+          </div>
+          <a className="footer-with" href="https://bettergov.ph" target="_blank" rel="noopener">
+            <span className="label">Data from</span>
+            <img src={BETTERGOV_LOGO} alt="BetterGov.ph" width="128" height="28" />
+          </a>
+        </div>
+
+        <nav className="footer-nav" aria-label="Site">
+          {NAV.map((n) => (
+            <Link key={n.label} to={{ pathname: n.to, hash: n.hash }}>
+              {n.label}
+            </Link>
+          ))}
+        </nav>
+
+        <ul className="footer-links">
           <li>
-            <span className="label">Every project, nationwide</span>
+            <span className="label">Nationwide</span>
             <a href={NATIONAL_URL} target="_blank" rel="noopener">budget.bettergov.ph ↗</a>
           </li>
           <li>
@@ -152,9 +161,22 @@ export function Footer() {
           </li>
           <li>
             <span className="label">Open source</span>
-            <a href={SOURCE_CODE_URL} target="_blank" rel="noopener">Fork this portal for your LGU or DPWH office ↗</a>
+            <a href={SOURCE_CODE_URL} target="_blank" rel="noopener">Fork for your LGU or DPWH office ↗</a>
           </li>
         </ul>
+
+        <div className="footer-meta">
+          <p className="footer-source">
+            Source: NEP FY 2027 and House Bill 10858 · via the BetterGov.ph Budget API
+            {meta && <> · data built {date(meta.built_at)}</>}
+          </p>
+          <p className="footer-notice">
+            Population for “per resident” figures: Philippine Statistics Authority, 2020 Census of Population and Housing
+            (municipal counts via PhilAtlas / PSA-derived). Map boundaries: faeldon/philippines-json-maps · OpenStreetMap /
+            OpenFreeMap basemap.
+          </p>
+          {meta && <p className="footer-notice">{meta.notice}</p>}
+        </div>
       </div>
     </footer>
   );

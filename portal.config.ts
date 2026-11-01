@@ -34,4 +34,5 @@ export default defineConfig({
     exclude: [],
   },
   reporting: { enabled: false },
+  buildYourOwnStrip: false,
 });

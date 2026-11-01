@@ -5,6 +5,7 @@ import { Await } from '../components/Bits';
 import FriendlyCompare, { type CompareRow } from '../components/visual/FriendlyCompare';
 import ProjectCard from '../components/visual/ProjectCard';
 import TownPanel from '../components/visual/TownPanel';
+import TownPickButton from '../components/visual/TownPickButton';
 import { shortNameOf } from '../config';
 import { deoShort, officeCompare, uniqueOffices } from '../lib/charts';
 import { count, plural } from '../lib/format';
@@ -59,10 +60,13 @@ function ExploreBody({ projects, focus }: { projects: ScopedProject[]; focus: Fo
           <h2 id="town-pick-h" className="section-h">Pick a town</h2>
           <div className="town-picker">
             {towns.map((t) => (
-              <button key={t.townId} type="button" className="town-pick-btn" onClick={() => setBucket(t)}>
-                <span>{TOWN_LABEL[t.townId] ?? t.label}</span>
-                <span className="muted">{plural(t.projects.length, 'project')}</span>
-              </button>
+              <TownPickButton
+                key={t.townId}
+                label={TOWN_LABEL[t.townId] ?? t.label}
+                bucket={t}
+                active={bucket?.townId === t.townId && bucket.label === t.label}
+                onPick={setBucket}
+              />
             ))}
           </div>
           {districtWide.length > 0 && (
@@ -70,10 +74,13 @@ function ExploreBody({ projects, focus }: { projects: ScopedProject[]; focus: Fo
               <h3 className="friendly-compare-h">District-wide</h3>
               <div className="town-picker">
                 {districtWide.map((b) => (
-                  <button key={b.label} type="button" className="town-pick-btn" onClick={() => setBucket(b)}>
-                    <span>{b.label}</span>
-                    <span className="muted">{plural(b.projects.length, 'project')}</span>
-                  </button>
+                  <TownPickButton
+                    key={b.label}
+                    label={b.label}
+                    bucket={b}
+                    active={bucket?.label === b.label}
+                    onPick={setBucket}
+                  />
                 ))}
               </div>
             </>

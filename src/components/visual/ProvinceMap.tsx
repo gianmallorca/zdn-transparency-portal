@@ -5,9 +5,8 @@ import {
   setWorkerUrl,
   type GeoJSONSource,
   type MapLayerMouseEvent,
-  type StyleSpecification,
 } from 'maplibre-gl';
-import type { FeatureCollection } from 'geojson';
+import type { Feature, FeatureCollection, Position } from 'geojson';
 import { php } from '../../lib/format';
 import type { ScopedProject } from '../../lib/scope';
 import { GEO_NAME_TO_TOWN, TOWN_LABEL, type TownId, townTotals } from '../../lib/towns';
@@ -18,8 +17,12 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 setWorkerUrl(maplibreWorkerUrl);
 
 const SOURCE = 'zdn-munis';
+const LABEL_SOURCE = 'zdn-label-pts';
 const FILL = 'zdn-fill';
 const LINE = 'zdn-line';
+const LABELS = 'zdn-labels';
+/** Free vector basemap — no API key. We hide its place labels and draw our own. */
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 
 function enrich(
   geo: FeatureCollection,
@@ -87,31 +90,72 @@ function fillColorExpr(max: number): unknown[] {
   ];
 }
 
-const BASE_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: [
-        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
-    },
-  },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-};
+/** Ring average — good enough for municipality label anchors. */
+function ringCentroid(ring: Position[]): [number, number] {
+  let x = 0;
+  let y = 0;
+  const n = Math.max(ring.length - 1, 1);
+  for (let i = 0; i < n; i++) {
+    x += ring[i][0];
+    y += ring[i][1];
+  }
+  return [x / n, y / n];
+}
+
+function featureCentroid(f: Feature): [number, number] | null {
+  const g = f.geometry;
+  if (!g) return null;
+  if (g.type === 'Polygon') return ringCentroid(g.coordinates[0]);
+  if (g.type === 'MultiPolygon') {
+    let best: Position[] = g.coordinates[0][0];
+    let bestLen = best.length;
+    for (const poly of g.coordinates) {
+      if (poly[0].length > bestLen) {
+        best = poly[0];
+        bestLen = poly[0].length;
+      }
+    }
+    return ringCentroid(best);
+  }
+  return null;
+}
+
+function labelPoints(fc: FeatureCollection): FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: fc.features.flatMap((f) => {
+      const p = f.properties as { townId?: string; label?: string; value?: number } | null;
+      if (!p?.townId) return [];
+      const c = featureCentroid(f);
+      if (!c) return [];
+      return [{
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: c },
+        properties: { townId: p.townId, label: p.label ?? p.townId, value: p.value ?? 0 },
+      }];
+    }),
+  };
+}
+
+function hideBasemapLabels(map: MapLibreMap): void {
+  for (const layer of map.getStyle().layers ?? []) {
+    if (layer.type === 'symbol') {
+      map.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  }
+}
 
 export default function ProvinceMap({
   projects,
   selectedTownId,
   onSelectTown,
+  pointsNote,
 }: {
   projects: readonly ScopedProject[];
   selectedTownId: TownId | null;
   onSelectTown: (townId: TownId) => void;
+  /** Optional API caption about how many projects have coordinates. */
+  pointsNote?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -133,8 +177,11 @@ export default function ProvinceMap({
     () => (geo ? enrich(geo, totals, selectedTownId) : null),
     [geo, totals, selectedTownId],
   );
-  dataRef.current = data;
-  maxRef.current = max;
+
+  useEffect(() => {
+    dataRef.current = data;
+    maxRef.current = max;
+  }, [data, max]);
 
   useEffect(() => {
     onSelectRef.current = onSelectTown;
@@ -161,7 +208,7 @@ export default function ProvinceMap({
 
     const map = new MapLibreMap({
       container: el,
-      style: BASE_STYLE,
+      style: BASEMAP_STYLE,
       center: [122.95, 8.05],
       zoom: 8.2,
       attributionControl: { compact: true },
@@ -171,11 +218,18 @@ export default function ProvinceMap({
     mapRef.current = map;
 
     const ensureLayers = () => {
+      hideBasemapLabels(map);
       const fc = dataRef.current ?? { type: 'FeatureCollection', features: [] };
+      const pts = labelPoints(fc);
       if (!map.getSource(SOURCE)) {
         map.addSource(SOURCE, { type: 'geojson', data: fc });
       } else {
         (map.getSource(SOURCE) as GeoJSONSource).setData(fc);
+      }
+      if (!map.getSource(LABEL_SOURCE)) {
+        map.addSource(LABEL_SOURCE, { type: 'geojson', data: pts });
+      } else {
+        (map.getSource(LABEL_SOURCE) as GeoJSONSource).setData(pts);
       }
       if (!map.getLayer(FILL)) {
         map.addLayer({
@@ -184,7 +238,7 @@ export default function ProvinceMap({
           source: SOURCE,
           paint: {
             'fill-color': fillColorExpr(maxRef.current) as never,
-            'fill-opacity': 0.92,
+            'fill-opacity': 0.88,
           },
         });
       }
@@ -196,6 +250,33 @@ export default function ProvinceMap({
           paint: {
             'line-color': ['case', ['==', ['get', 'selected'], 1], '#0a44bd', '#ffffff'] as never,
             'line-width': ['case', ['==', ['get', 'selected'], 1], 2.5, 1.25] as never,
+          },
+        });
+      }
+      if (!map.getLayer(LABELS)) {
+        map.addLayer({
+          id: LABELS,
+          type: 'symbol',
+          source: LABEL_SOURCE,
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-font': ['Noto Sans Bold'],
+            'text-size': [
+              'interpolate', ['linear'], ['zoom'],
+              7, 10,
+              9, 12,
+              11, 14,
+            ],
+            'text-max-width': 7,
+            'text-padding': 6,
+            'text-allow-overlap': false,
+            'text-ignore-placement': false,
+            'symbol-sort-key': ['-', ['to-number', ['get', 'value']]],
+          },
+          paint: {
+            'text-color': '#0c2340',
+            'text-halo-color': 'rgba(255,255,255,0.95)',
+            'text-halo-width': 1.75,
           },
         });
       }
@@ -250,6 +331,9 @@ export default function ProvinceMap({
     const map = mapRef.current;
     if (!map?.getSource(SOURCE)) return;
     (map.getSource(SOURCE) as GeoJSONSource).setData(data);
+    if (map.getSource(LABEL_SOURCE)) {
+      (map.getSource(LABEL_SOURCE) as GeoJSONSource).setData(labelPoints(data));
+    }
     if (map.getLayer(FILL)) {
       map.setPaintProperty(FILL, 'fill-color', fillColorExpr(max) as never);
     }
@@ -290,7 +374,8 @@ export default function ProvinceMap({
         <span>More</span>
       </div>
       <p className="map-caption muted">
-        OpenStreetMap basemap · shade shows proposed project funding. Tap a town for its projects.
+        Shade shows proposed project funding. Tap a town for its projects.
+        {pointsNote ? <> {pointsNote}</> : null}
       </p>
       <label className="map-town-select">
         <span className="label">Or choose a town</span>

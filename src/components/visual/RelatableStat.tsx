@@ -23,11 +23,13 @@ export default function RelatableStat({
         {tip && (
           <>
             {' '}
-            <InfoTip>{tip}</InfoTip>
+            <InfoTip label="What this means">{tip}</InfoTip>
           </>
         )}
       </dt>
-      <dd className={`stat num${accent ? ' stat-accent' : ''}`}>{per ? per.friendly : php(amount)}</dd>
+      <dd className={`stat${accent ? ' stat-accent' : ''}`}>
+        <span className="stat-primary">{per ? per.friendly : php(amount)}</span>
+      </dd>
       {per && <dd className="relatable-exact">{per.exact}</dd>}
       {!per && amount != null && <dd className="stat-sub muted">{php(amount)}</dd>}
     </div>

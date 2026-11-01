@@ -28,16 +28,19 @@ function sentence(row: CompareRow): { dir: 'up' | 'down' | 'flat'; text: string 
 export default function FriendlyCompare({
   title,
   rows,
+  emptyMessage = 'No comparison rows available',
 }: {
   title: string;
   rows: CompareRow[];
+  emptyMessage?: string;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
-  if (!rows.length) return null;
 
   return (
     <section className="friendly-compare" aria-label={title}>
       <h3 className="friendly-compare-h">{title}</h3>
+      {!rows.length && <p className="section-empty">{emptyMessage}</p>}
+      {rows.length > 0 && (
       <ul className="friendly-list">
         {rows.map((row) => {
           const s = sentence(row);
@@ -82,6 +85,7 @@ export default function FriendlyCompare({
           );
         })}
       </ul>
+      )}
     </section>
   );
 }
