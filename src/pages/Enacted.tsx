@@ -5,7 +5,7 @@
  * - every program, activity or project in any department whose name names one
  *   of the portal's places, with its appropriation in each year.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import type { DistrictCard, DistrictOffice, Envelope } from '../api/types';
 import { GAA_YEARS } from '../api/types';
@@ -169,7 +169,7 @@ function OfficeHistory({ office }: { office: DistrictOffice }) {
         {bars.map((b) => (
           <div key={b.key} className={`bar-col k-${b.kind}`} title={b.v?.php != null ? `${b.v.stage_label} ${b.key.slice(0, 4)}: ${phpFull(b.v.php)} (${b.v.scope})` : 'The office was not found that year'}>
             <span className="bar-v num">{b.v?.php != null ? php(b.v.php).replace('₱', '') : '—'}</span>
-            <span className="bar-track"><span className="bar-fill" style={{ height: `${((b.v?.php ?? 0) / max) * 100}%` }} /></span>
+            <span className="bar-track"><span className="bar-fill" style={{ '--p': `${((b.v?.php ?? 0) / max) * 100}%` } as CSSProperties} /></span>
             <span className="bar-x">{b.label}</span>
           </div>
         ))}
