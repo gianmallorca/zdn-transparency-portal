@@ -18,7 +18,7 @@ GET {reporting.url}?portal={id}&dataset={dataset}&project={project id}&from={pag
 
 | Parameter | Value |
 | --- | --- |
-| `portal` | `config.id` of the portal the reader came from, e.g. `bohol-province` |
+| `portal` | `config.id` of the portal the reader came from, e.g. `zamboanga-del-norte` |
 | `dataset` | `dpwh`, `fmr`, `hfep` or `nia` |
 | `project` | The project id as the API gives it, e.g. `house-reading:848` |
 | `from` | The page the reader was on, for a "back to the portal" link |

@@ -8,11 +8,12 @@ of 2020 to 2026** for the same area: each DPWH office's budget year by year, and
 program or project in any department whose name names the place.
 
 <p align="center">
-  <img src="docs/poster/create-your-own-transparency-portal-1080x1080.png" alt="Create your own transparency portal: for your LGU or DPWH district office. A sample portal for the Province of Bohol, and three steps: fork, run npm run setup, deploy." width="540">
+  <img src="docs/poster/create-your-own-transparency-portal-1080x1080.png" alt="Create your own transparency portal: for your LGU or DPWH district office. Three steps: fork, run npm run setup, deploy." width="540">
 </p>
 
-**See a sample:** [transparency-portal.bettergov.workers.dev](https://transparency-portal.bettergov.workers.dev),
-the Province of Bohol, built from this repository as it is.
+**This copy** is the Province of Zamboanga del Norte (Region IX). Its scope is
+`portal.config.ts`: every DPWH district engineering office the Budget API lists
+for the province, and its legislative districts.
 
 It has no backend and no database. Everything comes from the public
 [BetterGov.ph Budget API](https://budget.bettergov.ph/docs), the same data behind
@@ -51,11 +52,20 @@ more stated reasons, and every row shows them.
 ```ts
 scope: {
   // Every DPWH line the documents list under these offices.
-  offices: ['Bohol 1st District Engineering Office'],
+  offices: [
+    'Zamboanga del Norte 1st District Engineering Office',
+    'Zamboanga del Norte 2nd District Engineering Office',
+    'Zamboanga del Norte 3rd District Engineering Office',
+    'Zamboanga del Norte 4th District Engineering Office',
+  ],
   // Every line in the four programs whose title names the place.
-  places: [{ label: 'Bohol', region: 'VII' }],
+  places: [{ label: 'Zamboanga del Norte', q: 'Zamboanga del Norte', region: 'IX' }],
   // District cards to show (representative, offices, tiers).
-  districts: ['leg:bohol:1st'],
+  districts: [
+    'leg:zamboanga-del-norte:1st',
+    'leg:zamboanga-del-norte:2nd',
+    'leg:zamboanga-del-norte:3rd',
+  ],
   // Lines removed by hand. Each needs a reason; the About page publishes them.
   exclude: [],
 }
