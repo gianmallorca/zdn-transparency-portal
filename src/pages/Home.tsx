@@ -5,6 +5,7 @@ import { BRIDGE_GROUPS } from '../api/types';
 import { shortNameOf, type DatasetKey } from '../config';
 import { Await, Disclaimers, ReasonTags, StatusChip } from '../components/Bits';
 import { PageHead } from '../components/Chrome';
+import Figures from '../components/Figures';
 import OfficesSection from '../components/OfficesSection';
 import { projectsCsv, downloadText } from '../lib/csv';
 import { count, php, phpDelta, plural } from '../lib/format';
@@ -127,6 +128,8 @@ function Projects({ scope, datasets }: { scope: ScopeResult; datasets: DatasetIn
       </PageHead>
 
       <Stats summary={summary} programName={programName} />
+
+      <Figures projects={all} />
 
       <OfficesSection />
 

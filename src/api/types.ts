@@ -194,7 +194,10 @@ export interface GroupCell {
   label: string;
   sub: string;
   rows: number;
+  /** This group's amount as the office ledger stores it. A cut is still a positive number here. */
   php: number;
+  nep_php?: number | null;
+  house_php?: number | null;
   unconfirmed_rows: number;
   unconfirmed_php: number;
 }
