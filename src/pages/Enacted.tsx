@@ -11,6 +11,7 @@ import type { DistrictCard, DistrictOffice, Envelope } from '../api/types';
 import { GAA_YEARS } from '../api/types';
 import { shortNameOf } from '../config';
 import { Await, Disclaimers, External } from '../components/Bits';
+import { OfficeTrend } from '../components/Figures';
 import { PageHead } from '../components/Chrome';
 import { downloadText } from '../lib/csv';
 import { count, php, phpFull, plural } from '../lib/format';
@@ -132,6 +133,7 @@ function OfficeHistoryList({ list }: { list: Envelope<DistrictCard>[] }) {
       <h2 id="office-years-h" className="section-h">
         {offices.length === 1 ? 'The DPWH office’s budget, year by year' : `${count(offices.length)} DPWH offices’ budgets, year by year`}
       </h2>
+      <OfficeTrend offices={offices} />
       <p className="legend">
         <span><i className="sw sw-gaa" /> Enacted (GAA), whole office</span>
         <span><i className="sw sw-nep" /> 2027 NEP, whole office</span>

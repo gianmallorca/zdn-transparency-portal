@@ -9,10 +9,14 @@ const BETTERGOV_LOGO = '/brand/bettergov-horizontal-primary.png';
 
 const NAV = [
   { to: '/', hash: '', label: '2027 projects' },
+  { to: '/', hash: '#charts', label: 'Charts' },
   { to: '/', hash: '#offices', label: 'Offices and districts' },
   { to: '/gaa', hash: '', label: 'Budgets 2020–2026' },
   { to: '/about', hash: '', label: 'About the data' },
 ];
+
+/** In-page sections. The projects link is the top of the page, so these hashes are not "projects". */
+const IN_PAGE = new Set(['#charts', '#offices']);
 
 export function Masthead() {
   const { config, client } = usePortal();
@@ -67,7 +71,7 @@ export function Masthead() {
       <nav className="subnav" aria-label="Sections">
         <div className="page subnav-inner">
           {NAV.map((n) => {
-            const active = pathname === n.to && (n.hash ? hash === n.hash : hash !== '#offices');
+            const active = pathname === n.to && (n.hash ? hash === n.hash : !IN_PAGE.has(hash));
             return (
               <Link
                 key={n.label}
