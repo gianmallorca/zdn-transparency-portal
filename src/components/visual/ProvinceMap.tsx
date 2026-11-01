@@ -2,53 +2,48 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Map as MapLibreMap,
   NavigationControl,
+  setWorkerUrl,
   type GeoJSONSource,
-  type MapGeoJSONFeature,
   type MapLayerMouseEvent,
+  type StyleSpecification,
 } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
 import { php } from '../../lib/format';
 import type { ScopedProject } from '../../lib/scope';
 import { GEO_NAME_TO_TOWN, TOWN_LABEL, type TownId, townTotals } from '../../lib/towns';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// MapLibre v6 + Vite: worker must be wired explicitly or GeoJSON sources never load.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+setWorkerUrl(maplibreWorkerUrl);
 
 const SOURCE = 'zdn-munis';
 const FILL = 'zdn-fill';
 const LINE = 'zdn-line';
 
-function shade(value: number, max: number): string {
-  if (max <= 0 || value <= 0) return '#e8eef8';
-  const t = Math.min(1, Math.sqrt(value / max));
-  const light = { r: 232, g: 238, b: 248 };
-  const deep = { r: 11, g: 79, b: 217 };
-  const r = Math.round(light.r + (deep.r - light.r) * t);
-  const g = Math.round(light.g + (deep.g - light.g) * t);
-  const b = Math.round(light.b + (deep.b - light.b) * t);
-  return `rgb(${r},${g},${b})`;
-}
-
 function enrich(
   geo: FeatureCollection,
   totals: Map<TownId, number>,
-  max: number,
   selectedTownId: TownId | null,
 ): FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: geo.features.map((f) => {
+    features: geo.features.map((f, i) => {
       const geoName = String((f.properties as { adm3_en?: string } | null)?.adm3_en ?? '');
-      const townId = GEO_NAME_TO_TOWN[geoName] ?? null;
-      const value = townId ? (totals.get(townId) ?? 0) : 0;
-      const label = townId ? (TOWN_LABEL[townId] ?? townId) : geoName;
+      const mapped = GEO_NAME_TO_TOWN[geoName];
+      const townId = mapped ?? '';
+      const value = mapped ? (totals.get(mapped) ?? 0) : 0;
+      const label = mapped ? (TOWN_LABEL[mapped] ?? mapped) : geoName;
       return {
-        ...f,
+        type: 'Feature' as const,
+        id: i + 1,
+        geometry: f.geometry,
         properties: {
-          ...f.properties,
+          adm3_en: geoName,
           townId,
           label,
           value,
-          fill: shade(value, max),
-          selected: townId != null && townId === selectedTownId ? 1 : 0,
+          selected: mapped && mapped === selectedTownId ? 1 : 0,
         },
       };
     }),
@@ -63,12 +58,10 @@ function boundsOf(geo: FeatureCollection): [[number, number], [number, number]] 
   const visit = (coords: unknown): void => {
     if (!Array.isArray(coords)) return;
     if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-      const lng = coords[0] as number;
-      const lat = coords[1] as number;
-      minLng = Math.min(minLng, lng);
-      maxLng = Math.max(maxLng, lng);
-      minLat = Math.min(minLat, lat);
-      maxLat = Math.max(maxLat, lat);
+      minLng = Math.min(minLng, coords[0] as number);
+      maxLng = Math.max(maxLng, coords[0] as number);
+      minLat = Math.min(minLat, coords[1] as number);
+      maxLat = Math.max(maxLat, coords[1] as number);
       return;
     }
     for (const c of coords) visit(c);
@@ -79,6 +72,37 @@ function boundsOf(geo: FeatureCollection): [[number, number], [number, number]] 
   if (!Number.isFinite(minLng)) return null;
   return [[minLng, minLat], [maxLng, maxLat]];
 }
+
+function fillColorExpr(max: number): unknown[] {
+  const top = Math.sqrt(Math.max(max, 1));
+  return [
+    'interpolate',
+    ['linear'],
+    ['sqrt', ['max', ['to-number', ['get', 'value']], 0]],
+    0, '#c5d4f0',
+    top * 0.25, '#8aade8',
+    top * 0.5, '#4a7fde',
+    top * 0.75, '#1f5ad0',
+    top, '#0b4fd9',
+  ];
+}
+
+const BASE_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: [
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+};
 
 export default function ProvinceMap({
   projects,
@@ -91,19 +115,26 @@ export default function ProvinceMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const fittedRef = useRef(false);
   const onSelectRef = useRef(onSelectTown);
+  const dataRef = useRef<FeatureCollection | null>(null);
+  const maxRef = useRef(0);
 
   const [geo, setGeo] = useState<FeatureCollection | null>(null);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hover, setHover] = useState<{ label: string; value: number; x: number; y: number } | null>(null);
 
   const totals = useMemo(() => townTotals(projects), [projects]);
-  const max = useMemo(() => Math.max(0, ...totals.values()), [totals]);
+  const max = useMemo(() => {
+    const vals = [...totals.values()];
+    return vals.length ? Math.max(...vals) : 0;
+  }, [totals]);
   const data = useMemo(
-    () => (geo ? enrich(geo, totals, max, selectedTownId) : null),
-    [geo, totals, max, selectedTownId],
+    () => (geo ? enrich(geo, totals, selectedTownId) : null),
+    [geo, totals, selectedTownId],
   );
+  dataRef.current = data;
+  maxRef.current = max;
 
   useEffect(() => {
     onSelectRef.current = onSelectTown;
@@ -123,60 +154,66 @@ export default function ProvinceMap({
     return () => { cancelled = true; };
   }, []);
 
+  // Mount MapLibre once; add municipality source/layers on style load.
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
 
     const map = new MapLibreMap({
-      container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-      },
-      center: [122.9, 8.1],
-      zoom: 8,
+      container: el,
+      style: BASE_STYLE,
+      center: [122.95, 8.05],
+      zoom: 8.2,
       attributionControl: { compact: true },
       scrollZoom: false,
     });
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     mapRef.current = map;
 
-    const onLoad = () => {
-      map.addSource(SOURCE, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-      map.addLayer({
-        id: FILL,
-        type: 'fill',
-        source: SOURCE,
-        paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': 0.92 },
-      });
-      map.addLayer({
-        id: LINE,
-        type: 'line',
-        source: SOURCE,
-        paint: {
-          'line-color': ['case', ['==', ['get', 'selected'], 1], '#0a44bd', '#ffffff'],
-          'line-width': ['case', ['==', ['get', 'selected'], 1], 2.5, 1],
-        },
-      });
+    const ensureLayers = () => {
+      const fc = dataRef.current ?? { type: 'FeatureCollection', features: [] };
+      if (!map.getSource(SOURCE)) {
+        map.addSource(SOURCE, { type: 'geojson', data: fc });
+      } else {
+        (map.getSource(SOURCE) as GeoJSONSource).setData(fc);
+      }
+      if (!map.getLayer(FILL)) {
+        map.addLayer({
+          id: FILL,
+          type: 'fill',
+          source: SOURCE,
+          paint: {
+            'fill-color': fillColorExpr(maxRef.current) as never,
+            'fill-opacity': 0.92,
+          },
+        });
+      }
+      if (!map.getLayer(LINE)) {
+        map.addLayer({
+          id: LINE,
+          type: 'line',
+          source: SOURCE,
+          paint: {
+            'line-color': ['case', ['==', ['get', 'selected'], 1], '#0a44bd', '#ffffff'] as never,
+            'line-width': ['case', ['==', ['get', 'selected'], 1], 2.5, 1.25] as never,
+          },
+        });
+      }
+      const b = boundsOf(fc);
+      if (b && fc.features.length) {
+        map.fitBounds(b, { padding: 28, maxZoom: 10, duration: 0 });
+      }
+      map.resize();
+      setReady(true);
     };
-    map.on('load', onLoad);
 
-    const pickTown = (feature: MapGeoJSONFeature | undefined) => {
-      const townId = feature?.properties?.townId as string | null | undefined;
+    if (map.isStyleLoaded()) ensureLayers();
+    else map.on('load', ensureLayers);
+
+    map.on('click', FILL, (e: MapLayerMouseEvent) => {
+      const townId = e.features?.[0]?.properties?.townId as string | undefined;
       if (townId) onSelectRef.current(townId);
-    };
-
-    map.on('click', FILL, (e: MapLayerMouseEvent) => pickTown(e.features?.[0]));
+    });
     map.on('mousemove', FILL, (e: MapLayerMouseEvent) => {
       map.getCanvas().style.cursor = 'pointer';
       const f = e.features?.[0];
@@ -196,31 +233,29 @@ export default function ProvinceMap({
       setHover(null);
     });
 
+    const onResize = () => map.resize();
+    window.addEventListener('resize', onResize);
+
     return () => {
+      window.removeEventListener('resize', onResize);
+      setReady(false);
       map.remove();
       mapRef.current = null;
-      fittedRef.current = false;
     };
   }, []);
 
+  // Keep source + choropleth in sync with live project totals.
   useEffect(() => {
+    if (!ready || !data) return;
     const map = mapRef.current;
-    if (!map || !data) return;
-
-    const apply = () => {
-      const src = map.getSource(SOURCE) as GeoJSONSource | undefined;
-      if (!src) return;
-      src.setData(data);
-      const b = boundsOf(data);
-      if (b && !fittedRef.current) {
-        map.fitBounds(b, { padding: 24, maxZoom: 10, duration: 0 });
-        fittedRef.current = true;
-      }
-    };
-
-    if (map.getSource(SOURCE)) apply();
-    else map.once('load', apply);
-  }, [data]);
+    if (!map?.getSource(SOURCE)) return;
+    (map.getSource(SOURCE) as GeoJSONSource).setData(data);
+    if (map.getLayer(FILL)) {
+      map.setPaintProperty(FILL, 'fill-color', fillColorExpr(max) as never);
+    }
+    const b = boundsOf(data);
+    if (b) map.fitBounds(b, { padding: 28, maxZoom: 10, duration: 0 });
+  }, [ready, data, max]);
 
   const towns = useMemo(() => {
     if (!data) return [];

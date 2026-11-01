@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => {
   const api = (env.VITE_API_BASE || portal.api || DEFAULT_API).replace(/\/+$/, '');
   return {
     plugins: [react(), portalHtml(api)],
+    // MapLibre v6 ships a separate ESM worker; Vite's dep optimizer can break it
+    // so GeoJSON layers never load. Keep it external and setWorkerUrl in app code.
+    optimizeDeps: { exclude: ['maplibre-gl'] },
     server: {
       host: '0.0.0.0',
       // Reserved in ~/projects/ports.md (transparency-portal). strictPort so a
