@@ -74,10 +74,10 @@ function AboutView({ scope, overview }: { scope: ScopeResult; overview: Overview
                 {q.kind === 'office' ? <>are listed under <strong>{q.label}</strong></> : <>have a title naming <strong>{String(q.params.q)}</strong></>}
                 {q.region && <span className="muted small"> · kept to region {q.region}, or giving no region</span>}
               </span>
-              <span role="cell">{label(q.dataset)}</span>
-              <span role="cell" className="r num">{count(q.total)}</span>
-              <span role="cell" className="r num">{count(q.kept)}</span>
-              <span role="cell" className="r"><External href={q.api}>API</External></span>
+              <span role="cell" data-label="Program">{label(q.dataset)}</span>
+              <span role="cell" className="r num" data-label="Found">{count(q.total)}</span>
+              <span role="cell" className="r num" data-label="Kept">{count(q.kept)}</span>
+              <span role="cell" className="r" data-label="Check it"><External href={q.api}>API</External></span>
             </div>
           ))}
         </div>
@@ -201,10 +201,10 @@ function GaaQuestions() {
             {state.value.queries.map((q) => (
               <div className="tr" role="row" key={q.place + q.department_id}>
                 <span role="cell"><strong>{q.q}</strong></span>
-                <span role="cell">{departmentShort(q.department)}</span>
-                <span role="cell" className="r num">{count(q.matched)}</span>
-                <span role="cell" className="r num">{count(q.fetched)}</span>
-                <span role="cell" className="r"><External href={q.api}>API</External></span>
+                <span role="cell" data-label="Department">{departmentShort(q.department)}</span>
+                <span role="cell" className="r num" data-label="Found">{count(q.matched)}</span>
+                <span role="cell" className="r num" data-label="Loaded">{count(q.fetched)}</span>
+                <span role="cell" className="r" data-label="Check it"><External href={q.api}>API</External></span>
               </div>
             ))}
           </div>

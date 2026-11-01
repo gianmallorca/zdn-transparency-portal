@@ -408,7 +408,32 @@ export function OfficeTrend({ offices }: { offices: DistrictOffice[] }) {
           {series.map((s, i) => <TrendLine key={s.id} series={s} color={TREND_COLORS[i % TREND_COLORS.length]} x={x} y={y} />)}
         </svg>
       </div>
-      <table className="sr-only">
+      <ul className="trend-stack">
+        {series.map((s, i) => (
+          <li key={s.id}>
+            <p className="trend-stack-name">
+              <i className="sw sw-line" style={{ background: TREND_COLORS[i % TREND_COLORS.length] }} aria-hidden="true" />
+              {s.short}
+              <span className="sr-only">, {s.full}</span>
+            </p>
+            <ul>
+              {s.points.map((p) => (
+                <li key={p.year}>
+                  <span className="label">{p.year}</span>
+                  <span className="num">{p.php == null ? '—' : php(p.php)}</span>
+                  <span className="hbar" aria-hidden="true">
+                    {p.php != null && p.php > 0 && (
+                      <span style={{ width: `${(p.php / max) * 100}%`, background: TREND_COLORS[i % TREND_COLORS.length] }} />
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+      <div className="sr-only">
+      <table>
         <caption>Enacted DPWH office budgets, 2020 to 2026, in pesos. A blank cell means the office was not listed that year.</caption>
         <thead>
           <tr>
@@ -425,6 +450,7 @@ export function OfficeTrend({ offices }: { offices: DistrictOffice[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

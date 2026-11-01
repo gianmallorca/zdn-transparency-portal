@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { KIND_LABELS, shortNameOf } from '../config';
 import { usePortal } from '../lib/portal-context';
@@ -21,6 +21,10 @@ const IN_PAGE = new Set(['#charts', '#offices']);
 export function Masthead() {
   const { config, client } = usePortal();
   const { pathname, hash } = useLocation();
+  const navRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [pathname, hash]);
   const today = useMemo(
     () => new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
     [],
@@ -69,7 +73,7 @@ export function Masthead() {
         </a>
       </div>
       <nav className="subnav" aria-label="Sections">
-        <div className="page subnav-inner">
+        <div className="page subnav-inner" ref={navRef}>
           {NAV.map((n) => {
             const active = pathname === n.to && (n.hash ? hash === n.hash : !IN_PAGE.has(hash));
             return (
